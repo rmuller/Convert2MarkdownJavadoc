@@ -19,13 +19,15 @@ Starting with **Java 23**, Javadoc supports writing documentation comments using
 
 ### Converts:
 
-| Traditional Javadoc           | Converted Markdown     |
-| ----------------------------- | ---------------------- |
-| `<p>` and `</p>`              | Blank line             |
-| `<code>text</code>`           | `` `text` ``           |
-| `{@code text}`                | `` `text` ``           |
-| `<ul><li>Item</li></ul>`      | `- Item`               |
-| `<pre><code>...</code></pre>` | ``` fenced code blocks |
+| Traditional Javadoc                        | Converted Markdown     |
+| ------------------------------------------ | ---------------------- |
+| `<p>` and `</p>`                           | Blank line             |
+| `<code>text</code>`                        | `` `text` ``           |
+| `{@code text}`                             | `` `text` ``           |
+| `<b>text</b>` and  `<strong>text</strong>` | `**text**`             |
+| `<i>text</i>` and  `<em>text</em>`         | ``*text*``             |
+| `<ul><li>Item</li></ul>`                   | `- Item`               |
+| `<pre><code>...</code></pre>`              | ``` fenced code blocks |
 
 This is easy to extend. Contributions are welcome!
 

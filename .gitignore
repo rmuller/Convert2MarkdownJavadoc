@@ -12,6 +12,7 @@ nbdist/
 # Java
 *.class
 *.jar
+javadoc/
 
 # OS
 .DS_Store

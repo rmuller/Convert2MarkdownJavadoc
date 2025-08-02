@@ -19,7 +19,7 @@ import java.nio.file.Path;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/// {@code Convert2MarkdownJavadoc} converts the traditional JavaDoc comments with Markdown Javadoc
+/// `Convert2MarkdownJavadoc` converts the traditional JavaDoc comments with Markdown Javadoc
 /// as introduced by Java 23.
 ///
 /// Also see <https://docs.oracle.com/en/java/javase/24/javadoc/using-markdown-documentation-comments.html>
@@ -30,43 +30,44 @@ import java.util.regex.Pattern;
 ///
 /// ```java
 /// /**
-/// * A method that does <code>something</code>.
-/// * <ul>
-/// *   <li>First</li>
-/// *   <li>Second</li>
-/// * </ul>
-/// */
+///  * A method that does <code>something</code>.
+///  * <ul>
+///  *   <li>First</li>
+///  *   <li>Second</li>
+///  * </ul>
+///  */
 /// ```
 ///
-/// After conversion:
+/// After conversion: 
 ///
 /// ```java
 /// /// A method that does `something`.
 /// ///
 /// /// - First
-/// // - Second
+/// /// - Second
 /// ```
 ///
-/// @since INFOMAS 3.0
+/// @since INFOMAS 3.1
 public final class Convert2MarkdownJavadoc {
 
-    private static final Pattern JAVADOC_COMMENT =
+    private static final Pattern JAVADOC_COMMENT =  
         Pattern.compile("/\\*\\*(.*?)\\*/", Pattern.DOTALL); // multi-line
     private static final int BASE_INDENT = 20;
     private static final String PREFIX = " ".repeat(BASE_INDENT) + "/// ";
-
     private final Path root;
 
     /// Create a new `Convert2MarkdownJavadoc` instance
     ///
     /// @param root The root directory to search
-    public Convert2MarkdownJavadoc(Path root) throws IOException {
+    public Convert2MarkdownJavadoc(Path root) {
         this.root = root;
     }
 
     /// Scan for all `*.java` files in the specified directory and subdirectories.
     /// For each java file, replace all traditional Javadoc comments `/**  */` to the Markdown
     /// Javadoc format `\\\`.
+    /// 
+    /// @throws IOException when an IO exception is thrown while reading / writing the Java file
     public void execute() throws IOException {
         try (var stream = Files.walk(root)) {
             stream
@@ -84,17 +85,25 @@ public final class Convert2MarkdownJavadoc {
             Matcher matcher = JAVADOC_COMMENT.matcher(content);
             StringBuffer result = new StringBuffer();
             while (matcher.find()) {
+                int start = matcher.start();
+                int lineStart = content.lastIndexOf('\n', start);
+                if (lineStart >= 0) {
+                    // +1 to exclude the newline character itself, so we only get the line content
+                    String lineBefore = content.substring(lineStart + 1, start);
+                    if (lineBefore.stripLeading().startsWith("///")) {
+                        continue;  // skip already Markdown-style javadoc
+                    }
+                }
                 String javadoc = matcher.group(1);
                 String converted = convertBlock(javadoc);
                 matcher.appendReplacement(result, Matcher.quoteReplacement(converted));
             }
             if (result.length() == 0) {
-                //log("No javadoc to convert, skipped: %s", file);
+                // log("No javadoc to convert, skipped: %s", file);
                 return;
             }
             matcher.appendTail(result);
             content = result.toString();
-            //log(content);
             Files.writeString(file, content);
             log("Updated: %s", file);
         } catch (IOException ex) {
@@ -103,7 +112,6 @@ public final class Convert2MarkdownJavadoc {
     }
 
     private String convertBlock(String javadoc) {
-        //log("```\n%s\n```", javadoc);
         String[] lines = javadoc.split("\n");
         StringBuilder newLines = new StringBuilder();
         for (int i = 0; i < lines.length; ++i) {
@@ -115,19 +123,23 @@ public final class Convert2MarkdownJavadoc {
             line = line.replaceAll("<p>", "\n");
             line = line.replaceAll("</p>", "");
             line = line.replaceAll("<code>(.*?)</code>", "`$1`");
-//            line = line.replaceAll("\\{@code\\s+([^}]+)}", "`$1`");
+            line = line.replaceAll("\\{@code\\s+([^}]+)}", "`$1`");
+            line = line.replaceAll("<b>(.*?)</b>", "**$1**");
+            line = line.replaceAll("<strong>(.*?)</strong>", "**$1**");
+            line = line.replaceAll("<i>(.*?)</i>", "*$1*");
+            line = line.replaceAll("<em>(.*?)</em>", "*$1*");
             line = line.replaceAll("<ul>", "");
             line = line.replaceAll("</ul>", "");
             line = line.replaceAll("<li>", "- ");
             line = line.replaceAll("</li>", "");
-//            line = line.replaceAll("<pre><code>", "```");
-//            line = line.replaceAll("</code></pre>", "```");
+            line = line.replaceAll("<pre><code>", "```");
+            line = line.replaceAll("</code></pre>", "```");
 
             int p = line.indexOf('*');
             int offset = p < 2 || newLines.isEmpty() ? BASE_INDENT : BASE_INDENT - 4;
             newLines.append(PREFIX, offset, PREFIX.length())
-                .append(line.substring(p + 1).trim())
-                .append("\n");
+                    .append(line.substring(p + 1).trim())
+                    .append("\n");
         }
         newLines.setLength(newLines.length() - 1);
         return newLines.toString();
@@ -137,6 +149,12 @@ public final class Convert2MarkdownJavadoc {
         System.out.println(args.length == 0 ? msg : msg.formatted(args));
     }
 
+    /// Start the conversion process.
+    /// 
+    /// @param args At most a single argument is expected, the root directory/
+    /// If not specified, the current directory is used as root
+    /// 
+    /// @throws IOException when an IO exception is thrown while reading / writing the Java file
     public static void main(String[] args) throws IOException {
         Path root = args.length > 0 ? Path.of(args[0]) : Path.of(".");
         var converter = new Convert2MarkdownJavadoc(root);
