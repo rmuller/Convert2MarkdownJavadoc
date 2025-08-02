@@ -1,0 +1,18 @@
+# Editors / IDEs
+.idea/
+.vscode/
+*.iml
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# Java
+*.class
+*.jar
+
+# OS
+.DS_Store
+Thumbs.db
